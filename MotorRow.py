@@ -183,7 +183,7 @@ class MotorRow():
             system = restrain_atoms(system, crds, mem_heavy_atoms, fc_pos)
             system = restrain_atoms(system, crds, mcs_atom_inds, fc_pos) 
 
-        integrator = LangevinIntegrator(temp*kelvin, 1/picosecond, dt*femtosecond)
+        integrator = LangevinMiddleIntegrator(temp*kelvin, 1/picosecond, dt*femtosecond)
         simulation = Simulation(self.topology, system, integrator)
         simulation.context.setPositions(positions)
         self._describe_state(simulation, "Original state")
@@ -291,7 +291,7 @@ class MotorRow():
             raise NotImplementedError('How did that happen?')
         
         #Any Step Establish Simulation
-        integrator = LangevinIntegrator(temp*kelvin, 1/picosecond, dt*femtosecond)
+        integrator = LangevinMiddleIntegrator(temp*kelvin, 1/picosecond, dt*femtosecond)
         try:
             platform = Platform.getPlatformByName('OpenCL')
             properties = {'OpenCLPrecision': 'mixed'}
