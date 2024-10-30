@@ -80,7 +80,7 @@ def parse_atom_inds(atom_inds, parse_atom_names, find_atom_names):
 
 def minimize_from_sys(sys, top, pos, temp=300.0, dt=2.0):
     
-        integrator = LangevinIntegrator(temp*kelvin, 1/picosecond, dt*femtosecond)
+        integrator = LangevinMiddleIntegrator(temp*kelvin, 1/picosecond, dt*femtosecond)
         simulation = Simulation(top, sys, integrator)
         simulation.context.setPositions(pos)
         _ = _describe_state(simulation, "Original state")
