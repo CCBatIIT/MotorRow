@@ -15,11 +15,11 @@ class MotorRow():
     A Class for Equilibration of Membrane Proteins
     Follows a five-step protocol
         0 - Minimization
-        1 - "nvt": {"fc_pos": 300.0, "totalSteps": 125000}
-        2 - "nvt": {"totalSteps": 125000}
-        3 - "npt": {"totalSteps": 2500000, "Barostat" : "MonteCarloMembraneBarostat", "Pressure" : 1.0}
-        4 - "npt": {"totalSteps": 2500000, "Barostat" : "MonteCarloBarostat", "Pressure" : 1.0}
-        5 - "npt": {"totalSteps": 10000000, "Barostat" : "MonteCarloBarostat", "Pressure" : 1.0}
+        1 - NVT with restraints on Membrane Z and Protein XYZ 250ps
+        2 - NPT with restraints on Membrane Z and Protein XYZ 250ps
+        3 - NVT with no restraints 250 ps
+        4 - NPT with no restraints (MonteCarloMembraneBarostat) 2.5ns
+        5 - NPT with no restraints (MonteCarloBarostat) 2.5ns
 
         Common - dt=2.0fs ; Temp=300K ; Platform=OpenCL ; 1000 step stdout ; 5000 step dcd ; 
     """
@@ -68,11 +68,11 @@ class MotorRow():
         """
         Run the standard five step equilibration
         0 - Minimization
-        1 - NVT with Heavy Restraints on the Protein and Membrane (Z) coords
-        2 - NVT with no restraints
-        3 - NPT with MonteCarlo Membrane Barostat
-        4 - NPT with MonteCarlo Barostat
-        5 - NPT with MonteCarlo Barostat
+        1 - NVT with restraints on Membrane Z and Protein XYZ 250ps
+        2 - NPT with restraints on Membrane Z and Protein XYZ (MonteCarloMembraneBarostat) 250ps 
+        3 - NVT with no restraints 250 ps
+        4 - NPT with no restraints (MonteCarloMembraneBarostat) 2.5ns
+        5 - NPT with no restraints (MonteCarloBarostat) 2.5ns
 
         Parameters:
             pdb_in: string: path to the pdb file (same as init) - the initial structure
@@ -90,16 +90,16 @@ class MotorRow():
         
         #Minimize
         state_fn, pdb_fn = self._minimize(pdb_in)
-        #NVT Restraints
-        state_fn, pdb_fn = self._run_step(state_fn, 1, nsteps=125000, positions_from_pdb=pdb_fn)
+        #NVT Restrained
+        state_fn, pdb_fn = self._run_step(state_fn, 1, nsteps=125000, positions_from_pdb=pdb_fn) #250 ps
+        #NPT Restrained
+        state_fn, pdb_fn = self._run_step(state_fn, 2, nsteps=125000, positions_from_pdb=pdb_fn) #250 ps
         #NVT no Restraints
-        state_fn, pdb_fn = self._run_step(state_fn, 2, nsteps=125000)
+        state_fn, pdb_fn = self._run_step(state_fn, 3, nsteps=125000) #250 ps
         #NPT Membrane Barostat
-        state_fn, pdb_fn = self._run_step(state_fn, 3, nsteps=250000)
-        #NPT
-        state_fn, pdb_fn = self._run_step(state_fn, 4, nsteps=250000)
-        #NPT
-        state_fn, pdb_fn = self._run_step(state_fn, 5, nsteps=250000)
+        state_fn, pdb_fn = self._run_step(state_fn, 4, nsteps=1250000) #2500 ps
+        #NPT Barostat
+        state_fn, pdb_fn = self._run_step(state_fn, 5, nsteps=1250000) #2500 ps
         
         return state_fn, pdb_fn
     
@@ -209,11 +209,11 @@ class MotorRow():
 
         """
         Run different hard-coded Simulations based on the step number
-        1 - NVT with Heavy Restraints on the Protein and Membrane (Z) coords
-        2 - NVT with no restraints
-        3 - NPT with MonteCarlo Membrane Barostat
-        4 - NPT with MonteCarlo Barostat
-        5 - NPT with MonteCarlo Barostat
+        1 - NVT with restraints on Membrane Z and Protein XYZ 250ps
+        2 - NPT with restraints on Membrane Z and Protein XYZ (MonteCarloMembraneBarostat) 250ps 
+        3 - NVT with no restraints 250 ps
+        4 - NPT with no restraints (MonteCarloMembraneBarostat) 2.5ns
+        5 - NPT with no restraints (MonteCarloBarostat) 2.5ns
         
         Parameters:
             state_in: string: path to a serialize OpenMM State as an xml file
@@ -269,18 +269,37 @@ class MotorRow():
             system.addForce(mem_rest)
 
         elif stepnum == 2:
-            pass
-
-        elif stepnum == 3:
+            assert positions_from_pdb is not None
+            crds, prt_heavy, mem_heavy, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb)
+            prt_rest = CustomExternalForce('fc_pos*periodicdistance(x,y,z,x0,y0,z0)^2')
+            prt_rest.addGlobalParameter('fc_pos', fc_pos)
+            prt_rest.addPerParticleParameter('x0')
+            prt_rest.addPerParticleParameter('y0')
+            prt_rest.addPerParticleParameter('z0')
+            for iatom in prt_heavy:
+                x, y, z = crds[iatom]/10
+                prt_rest.addParticle(iatom, [x, y, z])
+            system.addForce(prt_rest)
+            #Membrane Restraint
+            mem_rest = CustomExternalForce('fc_pos*periodicdistance(x,y,z,x,y,z0)^2')
+            mem_rest.addGlobalParameter('fc_pos', fc_pos)
+            mem_rest.addPerParticleParameter('z0')
+            for iatom in mem_heavy:
+                x, y, z = crds[iatom]/10
+                mem_rest.addParticle(iatom, [z])
+            system.addForce(mem_rest)
+            
             system.addForce(MonteCarloMembraneBarostat(press*bar, 300*bar*nanometer, temp*kelvin,
                                                        MonteCarloMembraneBarostat.XYIsotropic,
                                                        MonteCarloMembraneBarostat.ZFree, 100))
-        elif stepnum == 4:
-            #system.addForce(MonteCarloMembraneBarostat(press*bar, 300*bar*nanometer, temp*kelvin,
-            #                                           MonteCarloMembraneBarostat.XYIsotropic,
-            #                                           MonteCarloMembraneBarostat.ZFree, 100))
-            system.addForce(MonteCarloBarostat(press*bar, temp*kelvin, 100))
+            
+        elif stepnum == 3:
+            pass
 
+        elif stepnum == 4:
+            system.addForce(MonteCarloMembraneBarostat(press*bar, 300*bar*nanometer, temp*kelvin,
+                                                       MonteCarloMembraneBarostat.XYIsotropic,
+                                                       MonteCarloMembraneBarostat.ZFree, 100))
         elif stepnum == 5:
             #system.addForce(MonteCarloMembraneBarostat(press*bar, 300*bar*nanometer, temp*kelvin,
             #                                           MonteCarloMembraneBarostat.XYIsotropic,
@@ -321,7 +340,7 @@ class MotorRow():
                                     totalSteps=nsteps, separator=' : ')
         
         simulation.reporters.append(SDR)
-        DCDR = app.DCDReporter(file=fn_dcd, reportInterval=ndcd, append=append_dcd)
+        DCDR = app.DCDReporter(file=fn_dcd, reportInterval=ndcd, append=append_dcd, enforcePeriodicBox=True)
         simulation.reporters.append(DCDR)
         print(f'Starting Step {stepnum} with forces {simulation.system.getForces()}')
         print(f'Starting Step {stepnum} with box_vectors {simulation.system.getDefaultPeriodicBoxVectors()}')
