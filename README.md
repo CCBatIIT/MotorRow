@@ -21,8 +21,10 @@ production_xml, production_pdb = MR.main(input_pdb)
 ```
 
 ### Input files
-An XML/PDB Pair which were generated with the main usage case of Bridgeport\
-(https://github.com/CCBatIIT/Bridgeport/tree/main)\
+An XML/PDB Pair which were generated with the main usage case of Bridgeport.
+
+(https://github.com/CCBatIIT/Bridgeport/tree/main)
+
 Note that this XML is an XML serialized OpenMM System, not a force field file
 
 ### Output files
