@@ -23,7 +23,7 @@ if not os.path.exists(output_dir):
 	os.mkdir(output_dir)
 output_dir = os.path.join(sys.argv[3], input_name)
 # Run equilibration
-final_xml, final_pdb = MotorRow(input_xml, input_pdb, output_dir).main(input_pdb)
+final_xml, final_pdb = MotorRow(input_pdb, input_xml, output_dir).main(input_pdb)
 # Print final files
 print('Final pdb saved to', final_pdb)
 print('Final xml saved to', final_xml)

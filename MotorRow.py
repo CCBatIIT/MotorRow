@@ -24,7 +24,7 @@ class MotorRow():
         Common - dt=2.0fs ; Temp=300K ; Platform=OpenCL ; 1000 step stdout ; 5000 step dcd ; 
     """
     
-    def __init__(self, system_xml, pdb_file, working_directory):
+    def __init__(self, pdb_file, system_xml, working_directory):
         """
         Parse the xml into an openmm system; sets the self.system attribute from the xml file; sets the self.topology attribute from pdb_file
 
