@@ -95,11 +95,11 @@ class MotorRow():
         #NPT Restrained
         state_fn, pdb_fn = self._run_step(state_fn, 2, nsteps=125000, positions_from_pdb=pdb_fn) #250 ps
         #NVT no Restraints
-        state_fn, pdb_fn = self._run_step(state_fn, 3, nsteps=125000) #250 ps
+        state_fn, pdb_fn = self._run_step(state_fn, 3, nsteps=125000, positions_from_pdb=pdb_fn) #250 ps
         #NPT Membrane Barostat
-        state_fn, pdb_fn = self._run_step(state_fn, 4, nsteps=1250000) #2500 ps
+        state_fn, pdb_fn = self._run_step(state_fn, 4, nsteps=1250000, positions_from_pdb=pdb_fn) #2500 ps
         #NPT Barostat
-        state_fn, pdb_fn = self._run_step(state_fn, 5, nsteps=1250000) #2500 ps
+        state_fn, pdb_fn = self._run_step(state_fn, 5, nsteps=1250000, positions_from_pdb=pdb_fn) #2500 ps
         
         return state_fn, pdb_fn
     
@@ -159,7 +159,7 @@ class MotorRow():
         print(f'Wrote: {pdb_fn}')
         
 
-    def _minimize(self, pdb_in:str, pdb_out:str=None, state_xml_out:str=None, temp=300.0, dt=2.0, lig_resname: str=None, mcs: List[str]=None, fc_pos: float=40.0):
+    def _minimize(self, pdb_in:str, pdb_out:str=None, state_xml_out:str=None, temp=300.0, dt=2.0, fc_pos: float=40.0):
         """
         Minimizes the structure of pdb_in
         
@@ -172,16 +172,20 @@ class MotorRow():
         start = datetime.now()
         system, _, positions = unpack_infiles(self.system_xml, pdb_in)
 
-        # Add restraint if specified 
-        if mcs != None and lig_resname != None:
-            crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(pdb_in, lig_resname=lig_resname)
-            lig_heavy_atom_inds = np.array(lig_heavy_atoms)[:,0].astype(int)
-            lig_heavy_atom_names = np.array(lig_heavy_atoms)[:,1]
-            mcs_atom_inds = parse_atom_inds(lig_heavy_atom_inds, lig_heavy_atom_names, mcs)
+        # # Add restraint if specified 
+        # if mcs != None and lig_resname != None:
+        #     crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(pdb_in, lig_resname=lig_resname)
+        #     lig_heavy_atom_inds = np.array(lig_heavy_atoms)[:,0].astype(int)
+        #     lig_heavy_atom_names = np.array(lig_heavy_atoms)[:,1]
+        #     mcs_atom_inds = parse_atom_inds(lig_heavy_atom_inds, lig_heavy_atom_names, mcs)
 
-            system = restrain_atoms(system, crds, prt_heavy_atoms, fc_pos)
-            system = restrain_atoms(system, crds, mem_heavy_atoms, fc_pos)
-            system = restrain_atoms(system, crds, mcs_atom_inds, fc_pos) 
+        #     system = restrain_atoms(system, crds, prt_heavy_atoms, rst_strength=fc_pos)
+        #     system = restrain_atoms(system, crds, mem_heavy_atoms, rst_strength=fc_pos)
+        #     system = restrain_atoms(system, crds, mcs_atom_inds, rst_strength=fc_pos) 
+
+        # Add restraint to ligand
+        crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(pdb_in, lig_resname='UNK')
+        system = restrain_atoms(system, crds, np.array(lig_heavy_atoms)[:,0], rst_name='lig_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
 
         integrator = LangevinMiddleIntegrator(temp*kelvin, 1/picosecond, dt*femtosecond)
         simulation = Simulation(self.topology, system, integrator)
@@ -242,14 +246,14 @@ class MotorRow():
         #Establish State
         with open(self.system_xml) as f:
             system = XmlSerializer.deserialize(f.read())
-        
-        #print(f'Forces as loaded from XML: {system.getForces()}')
-        #print(f'Box Vectors as loaded from system: {system.getDefaultPeriodicBoxVectors()}')
-        
+
+        # Apply restraint to ligands
+        assert positions_from_pdb is not None
+        crds, prt_heavy, mem_heavy, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb, lig_resname='UNK')
+        system = restrain_atoms(system, crds, np.array(lig_heavy_atoms)[:,0], rst_name='lig_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+      
         #STEP SPECIFIC ACTIONS
         if stepnum == 1:
-            assert positions_from_pdb is not None
-            crds, prt_heavy, mem_heavy, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb)
             prt_rest = CustomExternalForce('fc_pos*periodicdistance(x,y,z,x0,y0,z0)^2')
             prt_rest.addGlobalParameter('fc_pos', fc_pos)
             prt_rest.addPerParticleParameter('x0')
