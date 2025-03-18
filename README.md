@@ -16,7 +16,7 @@ Following these steps, the membrane system is ready for production simulation.
 
 ```python
 input_pdb, input_xml = 'built.pdb', 'built.xml' # The outputs of Bridgeport
-MR = MotorRow(input_xml, input_pdb, os.path.getcwd())
+MR = MotorRow(input_pdb, input_xml, os.path.getcwd())
 production_xml, production_pdb = MR.main(input_pdb)
 ```
 
