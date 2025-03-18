@@ -6,7 +6,7 @@ from openmm import *
 from openmm.unit import *
 
 
-def get_positions_from_pdb(fname_pdb, lig_resname: str=None):
+def get_positions_from_pdb(fname_pdb, lig_resname: str=None, lig_chain: str=None):
     nameMembrane = ['DPP', 'POP']
     with open(fname_pdb, 'r') as f_pdb:
         l_pdb = f_pdb.read().split('\n')
@@ -20,6 +20,7 @@ def get_positions_from_pdb(fname_pdb, lig_resname: str=None):
     for line in l_pdb[:-1]:
         if line[:6] in ['ATOM  ', 'HETATM']:
             resname = line[17:20]
+            chain = line[21:23]
 
             words = line[30:].split()
             x = float(words[0])
@@ -32,6 +33,9 @@ def get_positions_from_pdb(fname_pdb, lig_resname: str=None):
                 mem_heavy_atoms.append(iatom)
             elif line[:6] in ['ATOM  '] and words[-1] != 'H':
                 if lig_resname != None and resname == lig_resname and words[-1] != 'H':
+                    lig_atom_name = line[12:16].strip().strip('x')
+                    lig_heavy_atoms.append([iatom, lig_atom_name])
+                elif lig_chain != None and chain.strip() == lig_chain.strip() and words[-1] != 'H':
                     lig_atom_name = line[12:16].strip().strip('x')
                     lig_heavy_atoms.append([iatom, lig_atom_name])
                 else:

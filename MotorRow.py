@@ -24,7 +24,7 @@ class MotorRow():
         Common - dt=2.0fs ; Temp=300K ; Platform=OpenCL ; 1000 step stdout ; 5000 step dcd ; 
     """
     
-    def __init__(self, pdb_file, system_xml, working_directory):
+    def __init__(self, pdb_file, system_xml, working_directory, lig_resname: str='UNK', lig_chain: str=None):
         """
         Parse the xml into an openmm system; sets the self.system attribute from the xml file; sets the self.topology attribute from pdb_file
 
@@ -62,6 +62,8 @@ class MotorRow():
         
         pdb = PDBFile(pdb_file)
         self.topology = pdb.topology
+        self.lig_resname = lig_resname
+        self.lig_chain = lig_chain
 
         
     def main(self, pdb_in):
@@ -170,21 +172,10 @@ class MotorRow():
             pdb_out - FilePath to the output structure
         """
         start = datetime.now()
-        system, _, positions = unpack_infiles(self.system_xml, pdb_in)
-
-        # # Add restraint if specified 
-        # if mcs != None and lig_resname != None:
-        #     crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(pdb_in, lig_resname=lig_resname)
-        #     lig_heavy_atom_inds = np.array(lig_heavy_atoms)[:,0].astype(int)
-        #     lig_heavy_atom_names = np.array(lig_heavy_atoms)[:,1]
-        #     mcs_atom_inds = parse_atom_inds(lig_heavy_atom_inds, lig_heavy_atom_names, mcs)
-
-        #     system = restrain_atoms(system, crds, prt_heavy_atoms, rst_strength=fc_pos)
-        #     system = restrain_atoms(system, crds, mem_heavy_atoms, rst_strength=fc_pos)
-        #     system = restrain_atoms(system, crds, mcs_atom_inds, rst_strength=fc_pos) 
+        system, _, positions = unpack_infiles(self.system_xml, pdb_in) 
 
         # Add restraint to ligand
-        crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(pdb_in, lig_resname='UNK')
+        crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(pdb_in, lig_resname=self.lig_resname, lig_chain=self.lig_chain)
         system = restrain_atoms(system, crds, np.array(lig_heavy_atoms)[:,0], rst_name='lig_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
 
         integrator = LangevinMiddleIntegrator(temp*kelvin, 1/picosecond, dt*femtosecond)
@@ -249,7 +240,7 @@ class MotorRow():
 
         # Apply restraint to ligands
         assert positions_from_pdb is not None
-        crds, prt_heavy, mem_heavy, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb, lig_resname='UNK')
+        crds, prt_heavy, mem_heavy, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb, lig_resname=self.lig_resname, lig_chain=self.lig_chain)
         system = restrain_atoms(system, crds, np.array(lig_heavy_atoms)[:,0], rst_name='lig_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
       
         #STEP SPECIFIC ACTIONS
@@ -274,7 +265,7 @@ class MotorRow():
 
         elif stepnum == 2:
             assert positions_from_pdb is not None
-            crds, prt_heavy, mem_heavy, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb)
+            crds, prt_heavy, mem_heavy, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb, lig_resname=self.lig_resname, lig_chain=self.lig_chain)
             prt_rest = CustomExternalForce('fc_pos*periodicdistance(x,y,z,x0,y0,z0)^2')
             prt_rest.addGlobalParameter('fc_pos', fc_pos)
             prt_rest.addPerParticleParameter('x0')
