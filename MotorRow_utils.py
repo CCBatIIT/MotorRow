@@ -25,7 +25,7 @@ def get_positions_from_pdb(fname_pdb, lig_resname: str=None, lig_chain: str=None
             x = float(line[30:38])
             y = float(line[38:46])
             z = float(line[46:54])
-            element = str(line[76:78])
+            element = str(line[76:78].replace('' , ''))
 
             coords.append(Vec3(x, y, z))
 
