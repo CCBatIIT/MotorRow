@@ -22,25 +22,22 @@ def get_positions_from_pdb(fname_pdb, lig_resname: str=None, lig_chain: str=None
             resname = line[17:20]
             chain = line[21:23]
 
-            words = line[30:].split()
-            x = float(words[0])
-            y = float(words[1])
-            z = float(words[2])
+            x = float(line[30:38])
+            y = float(line[38:46])
+            z = float(line[46:54])
+            element = str(line[76:78])
 
             coords.append(Vec3(x, y, z))
 
-            if line[17:20] in nameMembrane and words[-1] != 'H':
+            if line[17:20] in nameMembrane and element != 'H':
                 mem_heavy_atoms.append(iatom)
-            elif line[:6] in ['ATOM  '] and words[-1] != 'H':
-                if lig_resname != None and resname == lig_resname and words[-1] != 'H':
-                    lig_atom_name = line[12:16].strip().strip('x')
-                    lig_heavy_atoms.append([iatom, lig_atom_name])
-                elif lig_chain != None and chain.strip() == lig_chain.strip() and words[-1] != 'H':
+            elif line[:6] in ['ATOM  '] and element != 'H':
+                if lig_resname != None and resname == lig_resname and element != 'H':
                     lig_atom_name = line[12:16].strip().strip('x')
                     lig_heavy_atoms.append([iatom, lig_atom_name])
                 else:
                     prt_heavy_atoms.append(iatom)
-            elif lig_resname != None and resname == lig_resname and words[-1] != 'H':
+            elif lig_resname != None and resname == lig_resname and element != 'H':
                 lig_atom_name = line[12:16].strip().strip('x')
                 lig_heavy_atoms.append([iatom, lig_atom_name])
 
