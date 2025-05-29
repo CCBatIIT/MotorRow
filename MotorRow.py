@@ -63,6 +63,8 @@ class MotorRow():
         pdb = PDBFile(pdb_file)
         self.topology = pdb.topology
         self.lig_resname = lig_resname
+        if lig_chain != None:
+            lig_chain = lig_chain.strip()
         self.lig_chain = lig_chain
 
         
@@ -175,7 +177,7 @@ class MotorRow():
         system, _, positions = unpack_infiles(self.system_xml, pdb_in) 
 
         # Add restraint to ligand
-        crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(pdb_in, lig_resname=self.lig_resname, lig_chain=self.lig_chain.strip())
+        crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(pdb_in, lig_resname=self.lig_resname, lig_chain=self.lig_chain)
         if len(lig_heavy_atoms) > 0:
             system = restrain_atoms(system, crds, np.array(lig_heavy_atoms)[:,0], rst_name='lig_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
         elif self.lig_resname is not None or self.lig_chain is not None:
@@ -243,7 +245,7 @@ class MotorRow():
 
         # Get atoms
         assert positions_from_pdb is not None
-        crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(pdb_in, lig_resname=self.lig_resname, lig_chain=self.lig_chain.strip())        
+        crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(pdb_in, lig_resname=self.lig_resname, lig_chain=self.lig_chain)        
 
         # Ligand Restraint
         if stepnum != 5:
