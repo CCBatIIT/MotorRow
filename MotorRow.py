@@ -245,7 +245,7 @@ class MotorRow():
 
         # Get atoms
         assert positions_from_pdb is not None
-        crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(pdb_in, lig_resname=self.lig_resname, lig_chain=self.lig_chain)        
+        crds, prt_heavy_atoms, mem_heavy_atoms, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb, lig_resname=self.lig_resname, lig_chain=self.lig_chain)        
 
         # Ligand Restraint
         if stepnum != 5:
