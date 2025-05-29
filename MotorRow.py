@@ -238,52 +238,32 @@ class MotorRow():
         with open(self.system_xml) as f:
             system = XmlSerializer.deserialize(f.read())
 
-        # Apply restraint to ligands
+        # Get atoms
         assert positions_from_pdb is not None
         crds, prt_heavy, mem_heavy, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb, lig_resname=self.lig_resname, lig_chain=self.lig_chain)
-        system = restrain_atoms(system, crds, np.array(lig_heavy_atoms)[:,0], rst_name='lig_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+        
+        # Ligand Restraint
+        if stepnum != 5:
+            system = restrain_atoms(system, crds, np.array(lig_heavy_atoms)[:,0], rst_name='lig_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
       
         #STEP SPECIFIC ACTIONS
         if stepnum == 1:
-            prt_rest = CustomExternalForce('fc_pos*periodicdistance(x,y,z,x0,y0,z0)^2')
-            prt_rest.addGlobalParameter('fc_pos', fc_pos)
-            prt_rest.addPerParticleParameter('x0')
-            prt_rest.addPerParticleParameter('y0')
-            prt_rest.addPerParticleParameter('z0')
-            for iatom in prt_heavy:
-                x, y, z = crds[iatom]/10
-                prt_rest.addParticle(iatom, [x, y, z])
-            system.addForce(prt_rest)
+            
+            #Protein Restraint
+            system = restrain_atoms(system, crds, np.array(prt_heavy)[:,0], rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+            
             #Membrane Restraint
-            mem_rest = CustomExternalForce('fc_pos*periodicdistance(x,y,z,x,y,z0)^2')
-            mem_rest.addGlobalParameter('fc_pos', fc_pos)
-            mem_rest.addPerParticleParameter('z0')
-            for iatom in mem_heavy:
-                x, y, z = crds[iatom]/10
-                mem_rest.addParticle(iatom, [z])
-            system.addForce(mem_rest)
+            system = restrain_atoms(system, crds, np.array(mem_heavy)[:,0], rst_name='mem_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
 
         elif stepnum == 2:
-            assert positions_from_pdb is not None
-            crds, prt_heavy, mem_heavy, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb, lig_resname=self.lig_resname, lig_chain=self.lig_chain)
-            prt_rest = CustomExternalForce('fc_pos*periodicdistance(x,y,z,x0,y0,z0)^2')
-            prt_rest.addGlobalParameter('fc_pos', fc_pos)
-            prt_rest.addPerParticleParameter('x0')
-            prt_rest.addPerParticleParameter('y0')
-            prt_rest.addPerParticleParameter('z0')
-            for iatom in prt_heavy:
-                x, y, z = crds[iatom]/10
-                prt_rest.addParticle(iatom, [x, y, z])
-            system.addForce(prt_rest)
-            #Membrane Restraint
-            mem_rest = CustomExternalForce('fc_pos*periodicdistance(x,y,z,x,y,z0)^2')
-            mem_rest.addGlobalParameter('fc_pos', fc_pos)
-            mem_rest.addPerParticleParameter('z0')
-            for iatom in mem_heavy:
-                x, y, z = crds[iatom]/10
-                mem_rest.addParticle(iatom, [z])
-            system.addForce(mem_rest)
             
+            #Protein Restraint
+            system = restrain_atoms(system, crds, np.array(prt_heavy)[:,0], rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+            
+            #Membrane Restraint
+            system = restrain_atoms(system, crds, np.array(mem_heavy)[:,0], rst_name='mem_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+
+            # Add MC Membrane Barostat
             system.addForce(MonteCarloMembraneBarostat(press*bar, 300*bar*nanometer, temp*kelvin,
                                                        MonteCarloMembraneBarostat.XYIsotropic,
                                                        MonteCarloMembraneBarostat.ZFree, 100))
@@ -296,25 +276,16 @@ class MotorRow():
                                                        MonteCarloMembraneBarostat.XYIsotropic,
                                                        MonteCarloMembraneBarostat.ZFree, 100))
         elif stepnum == 5:
-            #system.addForce(MonteCarloMembraneBarostat(press*bar, 300*bar*nanometer, temp*kelvin,
-            #                                           MonteCarloMembraneBarostat.XYIsotropic,
-            #                                           MonteCarloMembraneBarostat.ZFree, 100))
             system.addForce(MonteCarloBarostat(press*bar, temp*kelvin, 100))
 
         else:
             raise NotImplementedError('How did that happen?')
         
-        #Any Step Establish Simulation
+        # Any Step Establish Simulation
         integrator = LangevinMiddleIntegrator(temp*kelvin, 1/picosecond, dt*femtosecond)
-        try:
-            platform = Platform.getPlatformByName('OpenCL')
-            properties = {'OpenCLPrecision': 'mixed'}
-            simulation = Simulation(self.topology, system, integrator, platform, properties)
-        except:
-            simulation = Simulation(self.topology, system, integrator)
+        simulation = Simulation(self.topology, system, integrator)
         
-        #If it is an NVT step, positions should be set from the pdb out of previous step
-        #otherwise positions (and box vecs) should be set via loadState
+        # Load Positions
         if stepnum == 1:
             assert positions_from_pdb is not None
             pdb = PDBFile(positions_from_pdb)
