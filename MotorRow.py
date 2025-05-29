@@ -258,18 +258,18 @@ class MotorRow():
         if stepnum == 1:
             
             #Protein Restraint
-            system = restrain_atoms(system, crds, np.array(prt_heavy)[:,0], rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+            system = restrain_atoms(system, crds, np.array(prt_heavy), rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
             
             #Membrane Restraint
-            system = restrain_atoms(system, crds, np.array(mem_heavy)[:,0], rst_name='mem_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+            system = restrain_atoms(system, crds, np.array(mem_heavy), rst_name='mem_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
 
         elif stepnum == 2:
             
             #Protein Restraint
-            system = restrain_atoms(system, crds, np.array(prt_heavy)[:,0], rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+            system = restrain_atoms(system, crds, np.array(prt_heavy), rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
             
             #Membrane Restraint
-            system = restrain_atoms(system, crds, np.array(mem_heavy)[:,0], rst_name='mem_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+            system = restrain_atoms(system, crds, np.array(mem_heavy), rst_name='mem_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
 
             # Add MC Membrane Barostat
             system.addForce(MonteCarloMembraneBarostat(press*bar, 300*bar*nanometer, temp*kelvin,
