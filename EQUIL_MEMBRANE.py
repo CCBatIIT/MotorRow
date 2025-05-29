@@ -20,6 +20,7 @@ parser.add_argument('name', help='Name to find .pdb and .xml. Should in format $
 parser.add_argument('output_dir', help='Directory to store equilibration files')
 parser.add_argument('--lig-resname', type=str, default='UNK', required=False, help='Resname of the ligand')
 parser.add_argument('--lig-chain', type=str, default=None, required=False, help='Chain of the ligand (if peptide)')
+parser.add_argument('--step-5-nsteps', type=int, default=1250000, required=False, help='Optional. Specify no. of 2 fs steps to perform in step 5 (NPT) no restraints')
 args = parser.parse_args()
 
 # Input files

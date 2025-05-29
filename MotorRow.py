@@ -66,7 +66,7 @@ class MotorRow():
         self.lig_chain = lig_chain
 
         
-    def main(self, pdb_in):
+    def main(self, pdb_in, step_5_nsteps: int=1250000):
         """
         Run the standard five step equilibration
         0 - Minimization
@@ -101,7 +101,7 @@ class MotorRow():
         #NPT Membrane Barostat
         state_fn, pdb_fn = self._run_step(state_fn, 4, nsteps=1250000, positions_from_pdb=pdb_fn) #2500 ps
         #NPT Barostat
-        state_fn, pdb_fn = self._run_step(state_fn, 5, nsteps=1250000, positions_from_pdb=pdb_fn) #2500 ps
+        state_fn, pdb_fn = self._run_step(state_fn, 5, nsteps=step_5_nsteps, positions_from_pdb=pdb_fn) #2500 ps
         
         return state_fn, pdb_fn
     
