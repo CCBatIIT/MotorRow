@@ -1,5 +1,6 @@
 #MotorRow
 import os, shutil, sys
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import mdtraj as md
 import numpy as np
 from openmm.app import *
@@ -68,7 +69,7 @@ class MotorRow():
         self.lig_chain = lig_chain
 
         
-    def main(self, pdb_in, step_5_nsteps: int=1250000):
+    def main(self, pdb_in, restrain_step_5: bool=False, step_5_nsteps: int=1250000):
         """
         Run the standard five step equilibration
         0 - Minimization
@@ -95,15 +96,15 @@ class MotorRow():
         #Minimize
         state_fn, pdb_fn = self._minimize(pdb_in)
         #NVT Restrained
-        state_fn, pdb_fn = self._run_step(state_fn, 1, nsteps=125000, positions_from_pdb=pdb_fn) #250 ps
+        state_fn, pdb_fn = self._run_step(state_fn, 1, nsteps=125000, positions_from_pdb=pdb_fn, restrain_lig=True) #250 ps
         #NPT Restrained
-        state_fn, pdb_fn = self._run_step(state_fn, 2, nsteps=125000, positions_from_pdb=pdb_fn) #250 ps
+        state_fn, pdb_fn = self._run_step(state_fn, 2, nsteps=125000, positions_from_pdb=pdb_fn, restrain_lig=True) #250 ps
         #NVT no Restraints
-        state_fn, pdb_fn = self._run_step(state_fn, 3, nsteps=125000, positions_from_pdb=pdb_fn) #250 ps
+        state_fn, pdb_fn = self._run_step(state_fn, 3, nsteps=125000, positions_from_pdb=pdb_fn, restrain_lig=True) #250 ps
         #NPT Membrane Barostat
-        state_fn, pdb_fn = self._run_step(state_fn, 4, nsteps=1250000, positions_from_pdb=pdb_fn) #2500 ps
+        state_fn, pdb_fn = self._run_step(state_fn, 4, nsteps=1250000, positions_from_pdb=pdb_fn, restrain_lig=True) #2500 ps
         #NPT Barostat
-        state_fn, pdb_fn = self._run_step(state_fn, 5, nsteps=step_5_nsteps, positions_from_pdb=pdb_fn) #2500 ps
+        state_fn, pdb_fn = self._run_step(state_fn, 5, nsteps=step_5_nsteps, positions_from_pdb=pdb_fn, restrain_lig=restrain_step_5) #2500 ps
         
         return state_fn, pdb_fn
     
@@ -159,8 +160,19 @@ class MotorRow():
             pdb_fn: string: The path to the PDB file to write the structure to
         """
         with open(pdb_fn, 'w') as f:
-            PDBFile.writeFile(sim.topology, sim.context.getState(getPositions=True).getPositions(), f, keepIds=True)
+            PDBFile.writeFile(sim.topology, sim.context.getState(getPositions=True, enforcePeriodicBox=True).getPositions(), f, keepIds=True)
         print(f'Wrote: {pdb_fn}')
+
+        top = md.Topology().from_openmm(sim.topology)
+        traj = md.Trajectory(xyz=sim.context.getState(getPositions=True).getPositions(asNumpy=True),
+                             topology=top,
+                             unitcell_lengths=np.array([sim.context.getState(getPositions=True).getPeriodicBoxVectors(asNumpy=True)[i][i]._value for i in range(3)]),
+                             unitcell_angles=np.array([90,90,90]))
+        traj.image_molecules(inplace=True)
+        wrapped_pdb_fn = os.path.join(os.path.dirname(pdb_fn), os.path.basename(pdb_fn).split('.')[0] + '_wrapped.pdb')
+        traj.save_pdb(wrapped_pdb_fn)
+        print(f'Wrote: {wrapped_pdb_fn}')
+
         
 
     def _minimize(self, pdb_in:str, pdb_out:str=None, state_xml_out:str=None, temp=300.0, dt=2.0, fc_pos: float=40.0):
@@ -203,9 +215,24 @@ class MotorRow():
         return state_xml_out, pdb_out
 
 
-    def _run_step(self, state_in:str, stepnum:int, state_xml_out:str=None, pdb_out:str=None,
-                  fc_pos:float=300.0, nsteps=125000, temp=300.0, dt=2.0, ncycles=50, nstdout=1000,
-                  fn_stdout=None, ndcd=5000, append_dcd: bool=False, fn_dcd=None, press=1.0, positions_from_pdb:str=None):
+    def _run_step(self, 
+                  state_in:str, 
+                  stepnum:int, 
+                  state_xml_out:str=None, 
+                  pdb_out:str=None,
+                  fc_pos:float=300.0, 
+                  nsteps=125000, 
+                  temp=300.0, 
+                  dt=2.0, 
+                  ncycles=50, 
+                  nstdout=1000,
+                  fn_stdout=None, 
+                  ndcd=5000, 
+                  append_dcd: bool=False, 
+                  fn_dcd=None, 
+                  press=1.0, 
+                  positions_from_pdb:str=None,
+                  restrain_lig: bool=True):
 
         """
         Run different hard-coded Simulations based on the step number
@@ -243,12 +270,13 @@ class MotorRow():
         with open(self.system_xml) as f:
             system = XmlSerializer.deserialize(f.read())
 
+
         # Get atoms
         assert positions_from_pdb is not None
-        crds, prt_heavy, mem_heavy, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb, lig_resname=self.lig_resname, lig_chain=self.lig_chain)        
+        crds, prt_heavy, mem_heavy, lig_heavy_atoms = get_positions_from_pdb(positions_from_pdb, lig_resname=self.lig_resname, lig_chain=self.lig_chain)
 
         # Ligand Restraint
-        if stepnum != 5:
+        if restrain_lig:
             if len(lig_heavy_atoms) > 0:
                 system = restrain_atoms(system, crds, np.array(lig_heavy_atoms)[:,0], rst_name='lig_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
             elif self.lig_resname is not None or self.lig_chain is not None:
