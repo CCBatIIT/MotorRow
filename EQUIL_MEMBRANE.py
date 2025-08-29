@@ -21,6 +21,7 @@ parser.add_argument('output_dir', help='Directory to store equilibration files')
 parser.add_argument('--lig-resname', type=str, default=None, required=False, help='Resname of the ligand')
 parser.add_argument('--lig-chain', type=str, default=None, required=False, help='Chain of the ligand (if peptide)')
 parser.add_argument('--step-5-nsteps', type=int, default=1250000, required=False, help='Optional. Specify no. of 2 fs steps to perform in step 5 (NPT) no restraints')
+parser.add_argument('--restrain-step-5', action='store_true', default=False, help='Flag to restrain ligand in step 5. Default is False.')
 args = parser.parse_args()
 
 # Input files
@@ -38,7 +39,7 @@ if not os.path.exists(output_dir):
 output_dir = os.path.join(sys.argv[3], input_name)
 
 # Run equilibration
-final_xml, final_pdb = MotorRow(input_pdb, input_xml, output_dir, lig_resname=lig_resname, lig_chain=lig_chain).main(input_pdb, step_5_nsteps=args.step_5_nsteps)
+final_xml, final_pdb = MotorRow(input_pdb, input_xml, output_dir, lig_resname=lig_resname, lig_chain=lig_chain).main(input_pdb, step_5_nsteps=args.step_5_nsteps, restrain_step_5=args.restrain_step_5)
 
 # Print final files
 print('Final pdb saved to', final_pdb)
