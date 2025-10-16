@@ -196,7 +196,7 @@ class MotorRow():
             raise Exception('Could not find ligand...')
 
         # Protein Restraint
-        system = restrain_atoms(system, crds, np.array(prt_heavy), rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+        system = restrain_atoms(system, crds, np.array(prt_heavy_atoms), rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
         
         integrator = LangevinMiddleIntegrator(temp*kelvin, 1/picosecond, dt*femtosecond)
         simulation = Simulation(self.topology, system, integrator)
