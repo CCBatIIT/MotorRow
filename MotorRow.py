@@ -227,7 +227,7 @@ class MotorRow():
                   ncycles=50, 
                   nstdout=1000,
                   fn_stdout=None, 
-                  ndcd=5000, 
+                  ndcd=500, 
                   append_dcd: bool=False, 
                   fn_dcd=None, 
                   press=1.0, 
