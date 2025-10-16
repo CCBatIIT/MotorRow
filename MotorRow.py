@@ -195,6 +195,9 @@ class MotorRow():
         elif self.lig_resname is not None or self.lig_chain is not None:
             raise Exception('Could not find ligand...')
 
+        # Protein Restraint
+        system = restrain_atoms(system, crds, np.array(prt_heavy), rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+        
         integrator = LangevinMiddleIntegrator(temp*kelvin, 1/picosecond, dt*femtosecond)
         simulation = Simulation(self.topology, system, integrator)
         simulation.context.setPositions(positions)
@@ -285,7 +288,7 @@ class MotorRow():
         #STEP SPECIFIC ACTIONS
         if stepnum == 1:
             
-            #Protein Restraint
+            # Protein Restraint
             system = restrain_atoms(system, crds, np.array(prt_heavy), rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
             
             #Membrane Restraint
@@ -293,10 +296,10 @@ class MotorRow():
 
         elif stepnum == 2:
             
-            #Protein Restraint
+            # Protein Restraint
             system = restrain_atoms(system, crds, np.array(prt_heavy), rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
             
-            #Membrane Restraint
+            # Membrane Restraint
             system = restrain_atoms(system, crds, np.array(mem_heavy), rst_name='mem_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
 
             # Add MC Membrane Barostat
@@ -305,9 +308,14 @@ class MotorRow():
                                                        MonteCarloMembraneBarostat.ZFree, 100))
             
         elif stepnum == 3:
-            pass
+            # Protein Restraint
+            system = restrain_atoms(system, crds, np.array(prt_heavy), rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
 
         elif stepnum == 4:
+            # Protein Restraint
+            system = restrain_atoms(system, crds, np.array(prt_heavy), rst_name='prot_k', rst_strength=86.68*(joule)/(angstrom*angstrom*mole))
+
+            # Add MC Membrane Barostat
             system.addForce(MonteCarloMembraneBarostat(press*bar, 300*bar*nanometer, temp*kelvin,
                                                        MonteCarloMembraneBarostat.XYIsotropic,
                                                        MonteCarloMembraneBarostat.ZFree, 100))
