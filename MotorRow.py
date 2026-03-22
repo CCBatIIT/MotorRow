@@ -353,7 +353,6 @@ class MotorRow():
         DCDR = app.DCDReporter(file=fn_dcd, reportInterval=ndcd, append=append_dcd, enforcePeriodicBox=True)
         simulation.reporters.append(DCDR)
         print(f'Starting Step {stepnum} with forces {simulation.system.getForces()}')
-        print(f'Starting Step {stepnum} with box_vectors {simulation.system.getDefaultPeriodicBoxVectors()}')
 
         # Write out state.xml
         if state_xml_out is None:
@@ -384,7 +383,6 @@ class MotorRow():
 
         end = datetime.now() - start
         print(f'Step {stepnum} completed after {end}')
-        print(f'Box Vectors after this step {simulation.system.getDefaultPeriodicBoxVectors()}')
         
         if pdb_out is None:
             pdb_out = os.path.join(self.abs_work_dir, f'Step_{stepnum}.pdb')
